@@ -1,37 +1,44 @@
 # Program to control passerelle between Android application
 # and micro-controller through USB tty
-import time
-import argparse
-import signal
-import sys
-import socket
+
 import socketserver
 import serial
 import threading
-import json
+from fonction_requests import get_devices, get_values, vigenere_decrypt
 
 HOST           = "0.0.0.0"
 UDP_PORT       = 10000
-MICRO_COMMANDS = ["TL" , "LT"]
 FILENAME        = "values.txt"
 LAST_VALUE      = ""
 
 class ThreadedUDPRequestHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
-        data = self.request[0].strip()
+        data = self.request[0].decode('utf-8').strip()
         socket = self.request[1]
         current_thread = threading.current_thread()
+        data = vigenere_decrypt(data, "HERMES")
         print("{}: client: {}, wrote: {}".format(current_thread.name, self.client_address, data))
-        if data != "":
-                        if data in MICRO_COMMANDS: # Send message through UART
-                                sendUARTMessage(data)
-                                
-                        elif data == "getValues()": # Sent last value received from micro-controller
-                                socket.sendto(LAST_VALUE, self.client_address) 
+        if data != "":                             
+                        if data == "getValues()": # Sent last value received from micro-controller
+                                print("envoie du message à " + self.client_address)
+                                socket.sendto(LAST_VALUE, self.client_address)
                                 # TODO: Create last_values_received as global variable      
+
+                        elif data.split()[0] == "GETVALUES":
+                                print(f"Envoie des valeurs de {data.split()[1]}")
+                                print(bytes(get_values(data.split()[1], FILENAME), "utf-8"))
+                                socket.sendto(bytes(get_values(data.split()[1], FILENAME), "utf-8"), self.client_address)
+                        elif data == "GETDEVICES":
+                                print("envoie de la liste des devices")
+                                socket.sendto(bytes(get_devices(FILENAME), "utf-8"), self.client_address)
+                        elif data.split()[0] == "PUTORDER":
+                                if set("TPHUL").issubset(set(data.split()[2])):
+                                        sendUARTMessage(f"{data.split()[1]},{data.split()[2]}")
+                        elif data == "ISAVAILABLE":
+                                socket.sendto(bytes("ok", "utf-8"), self.client_address)
                         else:
-                                print("Unknown message: ",data)
+                                print("Unknown message: ", data)
 
 class ThreadedUDPServer(socketserver.ThreadingMixIn, socketserver.UDPServer):
     pass
@@ -91,9 +98,10 @@ if __name__ == '__main__':
                         if (ser.inWaiting() > 0): # if incoming bytes are waiting
                                 
                                 data_bytes = ser.read(ser.inWaiting())
-                                data_str = data_bytes.decode()
-                                f.write(data_str)
-                                LAST_VALUE = data_str
+                                print(data_bytes)
+                                # data_str = data_bytes.decode()
+                                # f.write(data_str)
+                                # LAST_VALUE = data_str
                                 
         except (KeyboardInterrupt, SystemExit):
                 server.shutdown()
