@@ -34,7 +34,7 @@ class ThreadedUDPRequestHandler(socketserver.BaseRequestHandler):
                                 socket.sendto(bytes(get_devices(FILENAME), "utf-8"), self.client_address)
                         elif data.split()[0] == "PUTORDER":
                                 if set("TPHUL").issubset(set(data.split()[2])):
-                                        sendUARTMessage(f"{data.split()[1]},{data.split()[2]}")
+                                        sendUARTMessage(f"{data.split()[1]},{data.split()[2]}\n")
                         elif data == "ISAVAILABLE":
                                 socket.sendto(bytes("ok", "utf-8"), self.client_address)
                         else:
@@ -96,12 +96,14 @@ if __name__ == '__main__':
                 while ser.isOpen() : 
                         # time.sleep(100)
                         if (ser.inWaiting() > 0): # if incoming bytes are waiting
-                                
+                                f= open(FILENAME,"a")
                                 data_bytes = ser.read(ser.inWaiting())
                                 print(data_bytes)
-                                # data_str = data_bytes.decode()
-                                # f.write(data_str)
+                                data_str = data_bytes.decode()
+                                f.write(data_str)
+                                f.close()
                                 # LAST_VALUE = data_str
+                
                                 
         except (KeyboardInterrupt, SystemExit):
                 server.shutdown()

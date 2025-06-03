@@ -13,8 +13,8 @@ def parse_sensor_string(line):
     return {
         "id": int(parts[0]),
         "order": parts[1],
-        "temperature": int(parts[2]),
-        "humidity": int(parts[3]),
+        "temperature": float(parts[2]),
+        "humidity": float(parts[3]),
         "pressure": int(parts[4]),
         "uv": int(parts[5]),
         "light": int(parts[6])
